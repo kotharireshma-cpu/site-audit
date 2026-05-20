@@ -9,10 +9,10 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0a0c0f;--surf:#111318;--surf2:#1a1d24;--surf3:#222530;
-  --b:rgba(255,255,255,0.07);--b2:rgba(255,255,255,0.13);
-  --t:#e8eaf0;--t2:#8a8fa8;--t3:#555a70;
-  --g:#00e5a0;--g2:#00b37d;--w:#f5a623;--r:#ff4d4d;--bl:#4d9fff;
+  --bg:#f4f5f7; --surf:#ffffff; --surf2:#f0f1f4; --surf3:#e4e6eb;
+  --b:rgba(0,0,0,0.08); --b2:rgba(0,0,0,0.15);
+  --t:#1a1d24; --t2:#4a4f66; --t3:#9098b0;
+  --g:#00a372; --g2:#007d58; --w:#d4860a; --r:#d63030; --bl:#2563eb;
   --mono:'DM Mono',monospace;--sans:'Syne',sans-serif;
   --rad:12px;
 }
@@ -128,7 +128,7 @@ html,body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height
 .chip-w{background:rgba(245,166,35,0.12);color:var(--w);}
 .chip-r{background:rgba(255,77,77,0.12);color:var(--r);}
 
-.btn-submit{width:100%;background:var(--g);color:#000;border:none;padding:0.9rem;border-radius:var(--rad);font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;transition:all 0.2s;margin-bottom:0.75rem;}
+.btn-submit{width:100%;background:var(--g);color:#000;border:none;padding:0.9rem;border-radius:var(--rad);font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;transition:all 0.2s;margin-bottom:0.75rem;display:block;visibility:visible;opacity:1;}
 .btn-submit:disabled{opacity:0.4;cursor:not-allowed;}
 .btn-submit:active{transform:scale(0.98);}
 .sub-status{text-align:center;font-family:var(--mono);font-size:0.78rem;margin-bottom:1rem;min-height:1.2rem;}
@@ -645,13 +645,14 @@ async function submitAudit(){
 // ── DASHBOARD ──
 const DASH_SITES=['Versova','Powai','Bandra','Panvel','Nariman Point'];
 const DASH_SECS=[
-  {id:'structural',label:'Structural',icon:'⚒️'},
-  {id:'mep',label:'MEP',icon:'⚡'},
-  {id:'fitout',label:'Fit-out',icon:'🪑'},
-  {id:'fire',label:'Fire',icon:'🔥'},
-  {id:'cctv',label:'CCTV',icon:'📷'},
-  {id:'it',label:'IT',icon:'🌐'},
-  {id:'obs',label:'Obs',icon:'👁️'},
+  {id:'structural', label:'Structural',    icon:'⚒️'},
+  {id:'mep',        label:'Electrical & MEP', icon:'⚡'},
+  {id:'fitout',     label:'Sales Fit-out', icon:'🪑'},
+  {id:'fire',       label:'Fire & Security', icon:'🔥'},
+  {id:'cctv',       label:'CCTV',          icon:'📷'},
+  {id:'it',         label:'IT Infrastructure', icon:'🌐'},
+  {id:'obs',        label:'Observations',  icon:'👁️'},
+  {id:'media',      label:'Media / AI',    icon:'🤖'},
 ];
 let DASH_DATA=[];
 
@@ -722,32 +723,43 @@ function renderDashboard(){
   document.getElementById('dkReady').textContent=ready;
   document.getElementById('dkRisk').textContent=risk;
 
-  // Site cards
+  // Site cards — always show ALL 5 sites
   cards.innerHTML=DASH_SITES.map(site=>{
     const r=latest[site];
     const count=DASH_DATA.filter(d=>d.site===site).length;
-    if(!r) return `<div class="dash-site">
-      <div class="dash-site-hdr">
-        <div><div class="dash-site-name">${site}</div><div class="dash-site-meta">No audits yet</div></div>
-        <div>—</div>
-      </div>
-    </div>`;
-    const ov=Number(r.overallScore)||0;
-    const clr=ov>=75?'var(--g)':ov>=50?'var(--w)':'var(--r)';
+    const ov=r?Number(r.overallScore)||0:0;
+    const clr=ov>=75?'var(--g)':ov>=50?'var(--w)':ov>0?'var(--r)':'var(--t3)';
+    const hasMedia=r&&r.aiAnalysis&&r.aiAnalysis.trim().length>10;
+
     return `<div class="dash-site">
       <div class="dash-site-hdr">
         <div>
           <div class="dash-site-name">${site}</div>
-          <div class="dash-site-meta">${count} audit${count!==1?'s':''} · ${dFmtDate(r.date)} · ${r.engineer||'—'}</div>
+          <div class="dash-site-meta">${count?count+' audit'+(count!==1?'s':'')+ ' · '+(r?dFmtDate(r.date)+' · '+r.engineer:''):'No audits submitted yet'}</div>
         </div>
         <div style="text-align:right">
-          <div class="dash-site-score" style="color:${clr}">${ov}%</div>
+          <div class="dash-site-score" style="color:${clr}">${ov?ov+'%':'—'}</div>
           ${dChip(ov)}
         </div>
       </div>
       <div class="dash-bars">
         ${DASH_SECS.map(sec=>{
-          const sc=Number(r[sec.id])||0;
+          let sc=0;
+          let statusLabel='';
+          if(sec.id==='media'){
+            // Media status based on AI analysis presence
+            if(!r){ sc=0; statusLabel='—'; }
+            else if(hasMedia){ sc=100; statusLabel='Uploaded'; }
+            else { sc=0; statusLabel='No photos'; }
+            const mClr=hasMedia?'var(--g)':'var(--r)';
+            return `<div class="dash-bar-row">
+              <div class="dash-bar-ico">${sec.icon}</div>
+              <div class="dash-bar-lbl">${sec.label}</div>
+              <div class="dash-bar-wrap"><div class="dash-bar-fill" style="width:${sc}%;background:${mClr}"></div></div>
+              <div class="dash-bar-pct" style="color:${mClr};font-size:0.58rem;width:60px">${statusLabel}</div>
+            </div>`;
+          }
+          sc=r?Number(r[sec.id])||0:0;
           return `<div class="dash-bar-row">
             <div class="dash-bar-ico">${sec.icon}</div>
             <div class="dash-bar-lbl">${sec.label}</div>
@@ -756,7 +768,7 @@ function renderDashboard(){
           </div>`;
         }).join('')}
       </div>
-      <div class="dash-site-footer">Last by <span>${r.engineer||'—'}</span> · ${r.time||'—'}</div>
+      <div class="dash-site-footer">${r?'Last by <span>'+r.engineer+'</span> · '+r.time:'Awaiting first audit'}</div>
     </div>`;
   }).join('');
 
