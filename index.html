@@ -153,6 +153,36 @@ html,body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height
 
 .dots::after{content:'';animation:ell 1.2s steps(3,end) infinite;}
 @keyframes ell{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
+
+/* DASHBOARD */
+.btn-refresh-dash{background:none;border:1px solid var(--b2);color:var(--t2);padding:4px 12px;border-radius:16px;font-size:0.72rem;cursor:pointer;font-family:var(--mono);}
+.btn-refresh-dash:active{border-color:var(--g);color:var(--g);}
+.dash-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem;}
+.dash-kpi{background:var(--surf);border:1px solid var(--b);border-radius:var(--rad);padding:0.75rem;}
+.dash-kpi-label{font-size:0.6rem;font-family:var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px;}
+.dash-kpi-val{font-size:1.4rem;font-weight:700;line-height:1;}
+.dash-loading{text-align:center;padding:1.5rem;color:var(--t3);font-family:var(--mono);font-size:0.75rem;}
+.dash-site{background:var(--surf);border:1px solid var(--b);border-radius:var(--rad);margin-bottom:10px;overflow:hidden;}
+.dash-site-hdr{display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid var(--b);}
+.dash-site-name{font-size:0.9rem;font-weight:700;}
+.dash-site-meta{font-size:0.62rem;font-family:var(--mono);color:var(--t3);margin-top:2px;}
+.dash-site-score{font-size:1.4rem;font-weight:700;line-height:1;text-align:right;}
+.dash-bars{padding:0.65rem 1rem;}
+.dash-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.dash-bar-row:last-child{margin-bottom:0;}
+.dash-bar-ico{font-size:0.78rem;width:18px;text-align:center;flex-shrink:0;}
+.dash-bar-lbl{font-size:0.65rem;color:var(--t2);width:75px;flex-shrink:0;}
+.dash-bar-wrap{flex:1;height:5px;background:var(--surf3);border-radius:3px;overflow:hidden;}
+.dash-bar-fill{height:100%;border-radius:3px;transition:width 0.7s cubic-bezier(.4,0,.2,1);}
+.dash-bar-pct{font-family:var(--mono);font-size:0.62rem;width:28px;text-align:right;}
+.dash-site-footer{padding:0.5rem 1rem;border-top:1px solid var(--b);font-size:0.62rem;font-family:var(--mono);color:var(--t3);}
+.dash-site-footer span{color:var(--t2);}
+.dash-ai-entry{background:var(--surf2);border-radius:8px;padding:0.75rem;border-left:3px solid var(--bl);margin-bottom:8px;}
+.dash-ai-meta{font-size:0.62rem;font-family:var(--mono);color:var(--t3);margin-bottom:4px;}
+.dash-ai-meta span{color:var(--bl);}
+.dash-ai-text{font-size:0.75rem;color:var(--t2);line-height:1.6;}
+.dash-ai-text strong{color:var(--t);font-weight:600;}
+.dash-no-ai{text-align:center;padding:1rem;color:var(--t3);font-family:var(--mono);font-size:0.72rem;}
 </style>
 </head>
 <body>
@@ -218,7 +248,7 @@ html,body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height
 // ══════════════════════════════════════════
 // ⚠️  PASTE YOUR GOOGLE APPS SCRIPT URL HERE
 // ══════════════════════════════════════════
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyeHn8jxaSA-KDpb8MzL_D9_WAwY8UM0HNIyP4mQbsCYHFapJP-CX3LRYIUTbC2OImyvw/exec';
+const SHEET_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
 // Example: 'https://script.google.com/macros/s/AKfycb.../exec'
 
 const SECTIONS = [
@@ -329,7 +359,8 @@ function buildNav(){
   const nav = document.getElementById('bottomNav');
   const tabs = [...SECTIONS.map(s=>({id:s.id,ico:s.icon,lbl:s.label.split(' ')[0]})),
                 {id:'media',ico:'📸',lbl:'Media'},
-                {id:'summary',ico:'📋',lbl:'Submit'}];
+                {id:'summary',ico:'📋',lbl:'Submit'},
+                {id:'dashboard',ico:'📊',lbl:'Dashboard'}];
   nav.innerHTML = tabs.map(t=>
     `<button class="bnav-btn" id="bnav-${t.id}" onclick="switchTab('${t.id}')">
       <span class="ico">${t.ico}</span>
@@ -371,11 +402,29 @@ function buildContent(){
     <div class="ai-box" id="aiBox"></div>`;
   c.appendChild(mp);
 
-  // Summary page
-  const sp=document.createElement('div');
-  sp.className='page'; sp.id='page-summary';
-  sp.innerHTML=`<div id="summaryContent"></div>`;
-  c.appendChild(sp);
+  // Dashboard page
+  const dDiv=document.createElement('div');
+  dDiv.className='page'; dDiv.id='page-dashboard';
+  dDiv.innerHTML=`
+    <div class="sec-header">
+      <div class="sec-title"><div class="sec-icon" style="background:#4d9fff20">📊</div>Site Readiness</div>
+      <button class="btn-refresh-dash" onclick="loadDashboard()">↻ Refresh</button>
+    </div>
+
+    <div class="dash-kpis" id="dashKpis">
+      <div class="dash-kpi"><div class="kpi-label">Total Audits</div><div class="kpi-val" id="dkTotal">—</div></div>
+      <div class="dash-kpi"><div class="kpi-label">Avg Score</div><div class="kpi-val" id="dkAvg">—</div></div>
+      <div class="dash-kpi"><div class="kpi-label">Sites Ready</div><div class="kpi-val" style="color:var(--g)" id="dkReady">—</div></div>
+      <div class="dash-kpi"><div class="kpi-label">At Risk</div><div class="kpi-val" style="color:var(--r)" id="dkRisk">—</div></div>
+    </div>
+
+    <div id="dashSiteCards"><div class="dash-loading"><span class="dots">Loading dashboard</span></div></div>
+
+    <div style="margin-top:1rem;">
+      <div style="font-size:0.7rem;font-family:var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.6rem;">🤖 AI Media Summaries</div>
+      <div id="dashAI"><div class="dash-loading">Loading AI summaries<span class="dots"></span></div></div>
+    </div>`;
+  c.appendChild(dDiv);
 }
 
 function qCard(sid,i,q){
@@ -433,9 +482,9 @@ function overall(){
 
 function chip(sc){
   if(sc===null) return '<span class="chip" style="background:var(--surf3);color:var(--t3)">—</span>';
-  if(sc>=75) return '<span class="chip chip-g">LOW</span>';
-  if(sc>=50) return '<span class="chip chip-w">MED</span>';
-  return '<span class="chip chip-r">HIGH</span>';
+  if(sc>=75) return '<span class="chip chip-g">READY</span>';
+  if(sc>=50) return '<span class="chip chip-w">PARTIALLY READY</span>';
+  return '<span class="chip chip-r">NOT READY</span>';
 }
 
 function barClr(sc){
@@ -453,6 +502,7 @@ function switchTab(id){
   document.getElementById('content').scrollTop=0;
   curTab=id;
   if(id==='summary') renderSummary();
+  if(id==='dashboard') loadDashboard();
 }
 
 // ── MEDIA ──
@@ -592,7 +642,140 @@ async function submitAudit(){
   }
 }
 
-// ── LIVE FEED ──
+// ── DASHBOARD ──
+const DASH_SITES=['Versova','Powai','Bandra','Panvel','Nariman Point'];
+const DASH_SECS=[
+  {id:'structural',label:'Structural',icon:'⚒️'},
+  {id:'mep',label:'MEP',icon:'⚡'},
+  {id:'fitout',label:'Fit-out',icon:'🪑'},
+  {id:'fire',label:'Fire',icon:'🔥'},
+  {id:'cctv',label:'CCTV',icon:'📷'},
+  {id:'it',label:'IT',icon:'🌐'},
+  {id:'obs',label:'Obs',icon:'👁️'},
+];
+let DASH_DATA=[];
+
+function dBarClr(sc){
+  if(!sc||sc===0) return 'var(--surf3)';
+  if(sc>=75) return 'var(--g)';
+  if(sc>=50) return 'var(--w)';
+  return 'var(--r)';
+}
+function dChip(sc){
+  if(!sc||sc===0) return '<span style="font-size:0.6rem;font-family:var(--mono);color:var(--t3)">—</span>';
+  if(sc>=75) return '<span style="font-size:0.6rem;font-family:var(--mono);font-weight:700;color:var(--g)">READY</span>';
+  if(sc>=50) return '<span style="font-size:0.6rem;font-family:var(--mono);font-weight:700;color:var(--w)">PARTIALLY READY</span>';
+  return '<span style="font-size:0.6rem;font-family:var(--mono);font-weight:700;color:var(--r)">NOT READY</span>';
+}
+function dFmtDate(d){
+  if(!d) return '—';
+  try{const s=String(d).slice(0,10);const[y,m,day]=s.split('-');return day+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1];}catch(e){return String(d).slice(0,10);}
+}
+
+function loadDashboard(){
+  const cards=document.getElementById('dashSiteCards');
+  const aiWrap=document.getElementById('dashAI');
+  if(!cards) return;
+  cards.innerHTML='<div class="dash-loading"><span class="dots">Loading</span></div>';
+
+  if(SHEET_URL==='YOUR_APPS_SCRIPT_URL_HERE'){
+    cards.innerHTML='<div class="dash-loading">⚠ Paste your Apps Script URL in SHEET_URL to load dashboard</div>';
+    return;
+  }
+
+  const cb='dashcb'+Date.now();
+  const s=document.createElement('script');
+  s.src=SHEET_URL+'?action=get&callback='+cb;
+  window[cb]=function(data){
+    delete window[cb];
+    try{document.head.removeChild(s);}catch(e){}
+    DASH_DATA=Array.isArray(data)?data:[];
+    renderDashboard();
+  };
+  s.onerror=function(){
+    delete window[cb];
+    cards.innerHTML='<div class="dash-loading">Could not load — tap Refresh to retry</div>';
+  };
+  document.head.appendChild(s);
+}
+
+function renderDashboard(){
+  const cards=document.getElementById('dashSiteCards');
+  const aiWrap=document.getElementById('dashAI');
+  if(!cards) return;
+
+  // Latest per site
+  const latest={};
+  DASH_DATA.forEach(r=>{
+    if(!latest[r.site]||new Date(r.timestamp)>new Date(latest[r.site].timestamp)) latest[r.site]=r;
+  });
+
+  // KPIs
+  const scores=DASH_DATA.map(r=>Number(r.overallScore)).filter(n=>!isNaN(n)&&n>0);
+  const avg=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null;
+  const ready=Object.values(latest).filter(r=>Number(r.overallScore)>=75).length;
+  const risk=Object.values(latest).filter(r=>Number(r.overallScore)<50&&Number(r.overallScore)>0).length;
+  document.getElementById('dkTotal').textContent=DASH_DATA.length||'0';
+  const avgEl=document.getElementById('dkAvg');
+  avgEl.textContent=avg!==null?avg+'%':'—';
+  avgEl.style.color=avg>=75?'var(--g)':avg>=50?'var(--w)':'var(--r)';
+  document.getElementById('dkReady').textContent=ready;
+  document.getElementById('dkRisk').textContent=risk;
+
+  // Site cards
+  cards.innerHTML=DASH_SITES.map(site=>{
+    const r=latest[site];
+    const count=DASH_DATA.filter(d=>d.site===site).length;
+    if(!r) return `<div class="dash-site">
+      <div class="dash-site-hdr">
+        <div><div class="dash-site-name">${site}</div><div class="dash-site-meta">No audits yet</div></div>
+        <div>—</div>
+      </div>
+    </div>`;
+    const ov=Number(r.overallScore)||0;
+    const clr=ov>=75?'var(--g)':ov>=50?'var(--w)':'var(--r)';
+    return `<div class="dash-site">
+      <div class="dash-site-hdr">
+        <div>
+          <div class="dash-site-name">${site}</div>
+          <div class="dash-site-meta">${count} audit${count!==1?'s':''} · ${dFmtDate(r.date)} · ${r.engineer||'—'}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="dash-site-score" style="color:${clr}">${ov}%</div>
+          ${dChip(ov)}
+        </div>
+      </div>
+      <div class="dash-bars">
+        ${DASH_SECS.map(sec=>{
+          const sc=Number(r[sec.id])||0;
+          return `<div class="dash-bar-row">
+            <div class="dash-bar-ico">${sec.icon}</div>
+            <div class="dash-bar-lbl">${sec.label}</div>
+            <div class="dash-bar-wrap"><div class="dash-bar-fill" style="width:${sc}%;background:${dBarClr(sc)}"></div></div>
+            <div class="dash-bar-pct" style="color:${dBarClr(sc)}">${sc?sc+'%':'—'}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="dash-site-footer">Last by <span>${r.engineer||'—'}</span> · ${r.time||'—'}</div>
+    </div>`;
+  }).join('');
+
+  // AI summaries
+  const withAI=Object.entries(latest).filter(([,r])=>r.aiAnalysis&&r.aiAnalysis.trim().length>10);
+  if(!withAI.length){
+    aiWrap.innerHTML='<div class="dash-no-ai">No AI analyses yet — upload photos in the Media tab</div>';
+  } else {
+    aiWrap.innerHTML=withAI.map(([site,r])=>{
+      const txt=r.aiAnalysis.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,' ').slice(0,300)+'...';
+      return `<div class="dash-ai-entry">
+        <div class="dash-ai-meta"><span>${site}</span> · ${r.engineer||'—'} · ${dFmtDate(r.date)}</div>
+        <div class="dash-ai-text">${txt}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+
 function loadFeed(){
   const wrap=document.getElementById('feedWrap');
   if(!wrap) return;
