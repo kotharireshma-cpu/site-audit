@@ -191,6 +191,7 @@ html,body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height
   </div>
 
   <button class="btn-primary" id="btnStart" onclick="startAudit()">Begin Audit →</button>
+  <p id="errMsg" style="color:#ff4d4d;font-family:var(--mono);font-size:0.78rem;margin-top:0.75rem;display:none;max-width:440px;text-align:center;"></p>
 </div>
 
 <!-- APP -->
@@ -217,8 +218,7 @@ html,body{font-family:var(--sans);background:var(--bg);color:var(--t);min-height
 // ══════════════════════════════════════════
 // ⚠️  PASTE YOUR GOOGLE APPS SCRIPT URL HERE
 // ══════════════════════════════════════════
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyeHn8jxaSA-KDpb8MzL_D9_WAwY8UM0HNIyP4mQbsCYHFapJP-CX3LRYIUTbC2OImyvw/exec?action=get
-';
+const SHEET_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
 // Example: 'https://script.google.com/macros/s/AKfycb.../exec'
 
 const SECTIONS = [
@@ -277,21 +277,26 @@ let curTab = 'structural';
 })();
 
 function chk(){
+  // just keep button always enabled — validate on click
+}
+
+function startAudit(){
   const name = document.getElementById('engName').value.trim();
   const site = document.getElementById('siteSelect').value;
   const date = document.getElementById('aDate').value;
   const time = document.getElementById('aTime').value;
-  const ok   = name.length > 0 && site.length > 0 && date.length > 0 && time.length > 0;
-  const btn  = document.getElementById('btnStart');
-  btn.disabled = !ok;
-  btn.style.opacity = ok ? '1' : '0.35';
-}
+  const err  = document.getElementById('errMsg');
 
-function startAudit(){
-  S.engineer = document.getElementById('engName').value.trim();
-  S.site     = document.getElementById('siteSelect').value;
-  S.date     = document.getElementById('aDate').value;
-  S.time     = document.getElementById('aTime').value;
+  if(!name){ err.textContent='⚠ Please enter your name'; err.style.display='block'; return; }
+  if(!site){ err.textContent='⚠ Please select a site'; err.style.display='block'; return; }
+  if(!date){ err.textContent='⚠ Please select a date'; err.style.display='block'; return; }
+  if(!time){ err.textContent='⚠ Please select a time'; err.style.display='block'; return; }
+
+  err.style.display='none';
+  S.engineer = name;
+  S.site     = site;
+  S.date     = date;
+  S.time     = time;
   S.answers={}; S.notes={}; S.media=[]; S.aiText='';
 
   document.getElementById('splash').style.display='none';
